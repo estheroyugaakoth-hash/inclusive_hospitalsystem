@@ -1,0 +1,440 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Book an Appointment | Inclusive HealthCare</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Inclusive HealthCare</h1>
+        <p>Appointment Booking</p>
+    </header>
+
+    <nav aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="patient-dashboard.html">Dashboard</a>
+        <a href="appointments.html" aria-current="page">
+            Book Appointment
+        </a>
+    </nav>
+
+    <main>
+        <section aria-labelledby="bookingHeading">
+            <h2 id="bookingHeading">Request an Appointment</h2>
+
+            <p>
+                Complete the form to request your preferred appointment.
+            </p>
+
+            <form id="appointmentForm"
+                  aria-label="Request a hospital appointment">
+
+                <label for="patientName">Full Name</label>
+                <input
+                    type="text"
+                    id="patientName"
+                    name="patientName"
+                    placeholder="Enter your full name"
+                    autocomplete="name"
+                    required
+                >
+
+                <label for="patientEmail">Email Address</label>
+                <input
+                    type="email"
+                    id="patientEmail"
+                    name="patientEmail"
+                    placeholder="Enter your email address"
+                    autocomplete="email"
+                    required
+                >
+
+                <label for="department">Department</label>
+                <select id="department" name="department" required>
+                    <option value="">Select a department</option>
+                    <option value="general">General Medicine</option>
+                    <option value="paediatrics">Paediatrics</option>
+                    <option value="maternity">Maternity</option>
+                    <option value="dental">Dental Care</option>
+                    <option value="eye">Eye Care</option>
+                </select>
+
+                <label for="appointmentDate">Preferred Date</label>
+                <input
+                    type="date"
+                    id="appointmentDate"
+                    name="appointmentDate"
+                    required
+                >
+
+                <label for="appointmentTime">Preferred Time</label>
+                <select
+                    id="appointmentTime"
+                    name="appointmentTime"
+                    required
+                >
+                    <option value="">Select a time</option>
+                    <option value="09:00">9:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="13:00">1:00 PM</option>
+                    <option value="14:00">2:00 PM</option>
+                    <option value="15:00">3:00 PM</option>
+                </select>
+
+                <label for="reason">Reason for Visit</label>
+                <textarea
+                    id="reason"
+                    name="reason"
+                    rows="4"
+                    placeholder="Briefly describe the reason for your visit"
+                    required
+                ></textarea>
+
+                <button type="submit">Request Appointment</button>
+
+            </form>
+
+            <p id="appointmentMessage"
+               role="status"
+               aria-live="polite"></p>
+        </section>
+
+        <section id="savedAppointments"
+                 aria-labelledby="savedHeading">
+
+            <h2 id="savedHeading">Saved Appointments</h2>
+
+            <div id="appointmentsList"
+                 aria-live="polite"></div>
+
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Inclusive HealthCare</p>
+    </footer>
+
+    <script>
+        const appointmentForm =
+            document.getElementById("appointmentForm");
+
+        const appointmentDate =
+            document.getElementById("appointmentDate");
+
+        const appointmentMessage =
+            document.getElementById("appointmentMessage");
+
+        const appointmentsList =
+            document.getElementById("appointmentsList");
+
+        // Return today's date in the browser's local time.
+        function getLocalToday() {
+            const today = new Date();
+
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
+
+            return `${year}-${month}-${day}`;
+        }
+
+        // Prevent patients from selecting a past date.
+        appointmentDate.min = getLocalToday();
+
+        // Read saved appointments safely.
+        function getAppointments() {
+            try {
+                const saved = JSON.parse(
+                    localStorage.getItem("appointments") || "[]"
+                );
+
+                return Array.isArray(saved) ? saved : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        // Save the appointment list to browser storage.
+        function saveAppointments(appointments) {
+            try {
+                localStorage.setItem(
+                    "appointments",
+                    JSON.stringify(appointments)
+                );
+
+                return true;
+            } catch (error) {
+                appointmentMessage.textContent =
+                    "Unable to save appointments. Check browser storage.";
+
+                return false;
+            }
+        }
+
+        // Create a text element safely.
+        function createTextElement(tag, text) {
+            const element = document.createElement(tag);
+            element.textContent = text;
+            return element;
+        }
+
+        // Submit and save an appointment.
+        appointmentForm.addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            // Check the date again before saving.
+            if (appointmentDate.value < getLocalToday()) {
+                appointmentMessage.textContent =
+                    "Please select today or a future date.";
+
+                appointmentDate.focus();
+                return;
+            }
+
+            const appointment = {
+                patientName:
+                    document.getElementById("patientName").value.trim(),
+
+                patientEmail:
+                    document.getElementById("patientEmail").value.trim(),
+
+                department:
+                    document.getElementById("department").value,
+
+                appointmentDate: appointmentDate.value,
+
+                appointmentTime:
+                    document.getElementById("appointmentTime").value,
+
+                reason:
+                    document.getElementById("reason").value.trim(),
+
+                status: "Pending"
+            };
+
+            const appointments = getAppointments();
+
+            appointments.push(appointment);
+
+            if (!saveAppointments(appointments)) {
+                return;
+            }
+
+            appointmentMessage.textContent =
+                "Your appointment request has been saved successfully!";
+
+            appointmentForm.reset();
+
+            // Refresh the minimum date in case the day has changed.
+            appointmentDate.min = getLocalToday();
+
+            displayAppointments();
+        });
+
+        // Display saved appointments and their management controls.
+        function displayAppointments() {
+            const appointments = getAppointments();
+
+            appointmentsList.replaceChildren();
+
+            if (appointments.length === 0) {
+                appointmentsList.textContent =
+                    "No appointments have been saved yet.";
+
+                return;
+            }
+
+            appointments.forEach(function(appointment, index) {
+                const appointmentCard = document.createElement("article");
+
+                appointmentCard.classList.add("appointment-card");
+
+                const heading = createTextElement(
+                    "h3",
+                    "Appointment " + (index + 1)
+                );
+
+                const name = createTextElement(
+                    "p",
+                    "Patient: " + (appointment.patientName || "Not provided")
+                );
+
+                const email = createTextElement(
+                    "p",
+                    "Email: " + (appointment.patientEmail || "Not provided")
+                );
+
+                const departmentNames = {
+                    general: "General Medicine",
+                    paediatrics: "Paediatrics",
+                    maternity: "Maternity",
+                    dental: "Dental Care",
+                    eye: "Eye Care"
+                };
+
+                const department = createTextElement(
+                    "p",
+                    "Department: " +
+                    (departmentNames[appointment.department] ||
+                     appointment.department || "Not provided")
+                );
+
+                const date = createTextElement(
+                    "p",
+                    "Date: " + (appointment.appointmentDate || "Not provided")
+                );
+
+                const timeNames = {
+                    "09:00": "9:00 AM",
+                    "10:00": "10:00 AM",
+                    "11:00": "11:00 AM",
+                    "13:00": "1:00 PM",
+                    "14:00": "2:00 PM",
+                    "15:00": "3:00 PM"
+                };
+
+                const time = createTextElement(
+                    "p",
+                    "Time: " +
+                    (timeNames[appointment.appointmentTime] ||
+                     appointment.appointmentTime || "Not provided")
+                );
+
+                const reason = createTextElement(
+                    "p",
+                    "Reason: " + (appointment.reason || "Not provided")
+                );
+
+                const status = createTextElement(
+                    "p",
+                    "Current status: " + (appointment.status || "Pending")
+                );
+
+                status.classList.add("appointment-status");
+
+                // Accessible appointment status selector.
+                const statusLabel = document.createElement("label");
+
+                const statusSelectId = "appointmentStatus" + index;
+
+                statusLabel.htmlFor = statusSelectId;
+                statusLabel.textContent = "Update appointment status:";
+
+                const statusSelect = document.createElement("select");
+
+                statusSelect.id = statusSelectId;
+                statusSelect.setAttribute(
+                    "aria-label",
+                    "Status for appointment " + (index + 1)
+                );
+
+                const statusOptions = [
+                    "Pending",
+                    "Approved",
+                    "Cancelled"
+                ];
+
+                statusOptions.forEach(function(optionText) {
+                    const option = document.createElement("option");
+
+                    option.value = optionText;
+                    option.textContent = optionText;
+
+                    statusSelect.appendChild(option);
+                });
+
+                statusSelect.value = statusOptions.includes(
+                    appointment.status
+                ) ? appointment.status : "Pending";
+
+                // Save status changes.
+                statusSelect.addEventListener("change", function() {
+                    const updatedAppointments = getAppointments();
+
+                    if (!updatedAppointments[index]) {
+                        appointmentMessage.textContent =
+                            "Appointment not found. Please refresh the page.";
+                        return;
+                    }
+
+                    updatedAppointments[index].status = statusSelect.value;
+
+                    if (saveAppointments(updatedAppointments)) {
+                        appointmentMessage.textContent =
+                            "Appointment status updated.";
+
+                        displayAppointments();
+                    }
+                });
+
+                // Delete appointment with confirmation.
+                const deleteButton = document.createElement("button");
+
+                deleteButton.type = "button";
+                deleteButton.textContent = "Delete Appointment";
+
+                deleteButton.setAttribute(
+                    "aria-label",
+                    "Delete appointment " + (index + 1)
+                );
+
+                deleteButton.addEventListener("click", function() {
+                    const confirmed = window.confirm(
+                        "Are you sure you want to delete this appointment?"
+                    );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    const updatedAppointments = getAppointments();
+
+                    // Remove the correct appointment by its current index.
+                    if (index < 0 || index >= updatedAppointments.length) {
+                        appointmentMessage.textContent =
+                            "Appointment not found. Please refresh the page.";
+                        return;
+                    }
+
+                    updatedAppointments.splice(index, 1);
+
+                    if (saveAppointments(updatedAppointments)) {
+                        appointmentMessage.textContent =
+                            "Appointment deleted successfully.";
+
+                        displayAppointments();
+                    }
+                });
+
+                appointmentCard.append(
+                    heading,
+                    name,
+                    email,
+                    department,
+                    date,
+                    time,
+                    reason,
+                    status,
+                    statusLabel,
+                    statusSelect,
+                    deleteButton
+                );
+
+                appointmentsList.appendChild(appointmentCard);
+            });
+        }
+
+        // Show previously saved appointments when the page opens.
+        displayAppointments();
+    </script>
+
+</body>
+</html>
